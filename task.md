@@ -1,0 +1,21 @@
+- [ ] Phase 1: Project Setup & UI Foundation
+  - [ ] Initialize Vite React project
+  - [ ] Implement UI design system (Vanilla CSS, dark mode, glassmorphism)
+  - [ ] Build Video Upload component
+  - [ ] Build Video Player component
+- [ ] Phase 2: Video Pre-processing (FFmpeg)
+  - [ ] Integrate FFmpeg.wasm
+  - [ ] Implement video frame extraction (1 FPS)
+  - [ ] Implement audio extraction
+- [ ] Phase 3: AI Integration (Gemma 4)
+  - [ ] Create API schema/endpoint for Gemma 4 connection
+  - [ ] Define system prompt for video editing / highlighting
+  - [ ] Implement logic to receive and parse AI JSON response
+- [ ] Phase 4: Auto-Editing & Timeline
+  - [ ] Build visual Timeline component based on AI JSON
+  - [ ] Implement FFmpeg subtitle generation and burning
+  - [ ] Implement video cutting and concatenation using FFmpeg commands
+- [ ] Phase 5: Polish & Export
+  - [ ] Add loading states and progress bars
+  - [ ] Handle errors and failed analyses
+  - [ ] Implement video download functionality
