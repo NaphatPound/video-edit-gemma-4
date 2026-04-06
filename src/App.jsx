@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { testGemmaConnection, analyzeVideoContent } from './services/gemmaApi.js';
 import { initFFmpeg, extractFrames, processVideo, addSubtitles, isFFmpegLoaded } from './services/videoProcessor.js';
+import { transcribeVideoAudio, wordsToSubtitles } from './services/audioService.js';
 
 function App() {
   const [apiStatus, setApiStatus] = useState('checking');
@@ -92,21 +93,62 @@ function App() {
     setExportedVideoUrl('');
 
     try {
-      // Extract frames using canvas
+      // Step 1: Extract frames using canvas
       setProgressText('Extracting frames from video...');
       const extractedFrames = await extractFrames(videoFile, (prog, text) => {
-        setProgress(33 + prog * 0.3); // 33-63% for frame extraction
+        setProgress(prog * 0.3); // 0-30% for frames
         setProgressText(text);
       });
       setFrames(extractedFrames);
       console.log(`Extracted ${extractedFrames.length} frames`);
 
-      // Send to Gemma for analysis
-      setProgressText('Analyzing video with Gemma 4...');
+      // Step 2: Transcribe audio using browser SpeechRecognition
+      setProgressText('Transcribing audio with Speech Recognition...');
+      let transcription = [];
+      try {
+        transcription = await transcribeVideoAudio(videoFile, (prog, text) => {
+          setProgress(30 + prog * 0.2); // 30-50% for transcription
+          setProgressText(text);
+        });
+        console.log(`Transcribed ${transcription.length} word segments`);
+      } catch (transErr) {
+        console.warn('Transcription failed, using placeholder:', transErr);
+        transcription = [];
+      }
+
+      // Format transcription for Gemma
+      const transcriptText = transcription.length > 0
+        ? transcription.map(t => `[${t.start.toFixed(1)}s] ${t.text}`).join(' ')
+        : 'No speech detected';
+
+      // Step 3: Send to Gemma for analysis with frames + transcription
+      setProgressText('Analyzing with Gemma 4...');
       const analysis = await analyzeVideoContent(
         extractedFrames,
-        `Video file: ${videoFile.name} (${formatFileSize(videoFile.size)}, ${formatTime(videoDuration)} duration)`
+        transcriptText,
+        (prog, text) => {
+          setProgress(50 + prog * 0.45); // 50-95% for AI analysis
+          setProgressText(text);
+        }
       );
+
+      // Step 4: Merge AI segments with transcribed subtitles
+      if (transcription.length > 0 && analysis.segments) {
+        const subtitles = wordsToSubtitles(transcription, 5);
+        // Add subtitles to keep segments
+        analysis.segments = analysis.segments.map(segment => {
+          if (segment.type === 'keep') {
+            const matchingSub = subtitles.find(
+              sub => sub.start >= segment.start && sub.end <= segment.end
+            );
+            if (matchingSub) {
+              segment.subtitle = matchingSub.text;
+            }
+          }
+          return segment;
+        });
+        analysis.subtitles = subtitles;
+      }
 
       setProgress(95);
       setProgressText('Analysis complete!');

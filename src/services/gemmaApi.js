@@ -76,11 +76,12 @@ export async function sendToGemma(prompt, options = {}) {
 /**
  * Analyze video frames and audio with Gemma 4
  * Returns structured JSON for video editing decisions
- * @param {Array<string>} frameBase64 - Array of base64 encoded frames (currently unused - requires FFmpeg)
- * @param {string} audioTranscript - Audio transcript text
+ * @param {Array<string>} frameBase64 - Array of base64 encoded frames
+ * @param {string} transcriptText - Transcribed audio text
+ * @param {Function} progressCallback - Optional progress callback
  * @returns {Promise<Object>} - Video editing analysis
  */
-export async function analyzeVideoContent(frameBase64, audioTranscript) {
+export async function analyzeVideoContent(frameBase64, transcriptText, progressCallback = null) {
   const systemPrompt = `You are a professional video editor AI. You MUST respond with ONLY valid JSON, no other text.
 
 Analyze this video and return JSON with this exact structure:
@@ -93,9 +94,16 @@ Analyze this video and return JSON with this exact structure:
   "summary": "Brief summary of the video content"
 }`;
 
-  const userPrompt = `Analyze this video for editing. Audio transcript: "${audioTranscript || 'No audio available'}"
+  let userPrompt = `Analyze this video for editing.\n\nAudio transcript: "${transcriptText || 'No audio available'}"\n\n`;
 
-Return ONLY valid JSON, no markdown, no explanation.`;
+  // Add frame descriptions (since we can't send actual images without multimodal)
+  if (frameBase64 && frameBase64.length > 0) {
+    userPrompt += `Video contains ${frameBase64.length} frames extracted at 1 FPS.`;
+  }
+
+  userPrompt += `\n\nReturn ONLY valid JSON, no markdown, no explanation.`;
+
+  if (progressCallback) progressCallback(10, 'Sending to Gemma 4...');
 
   const response = await sendToGemma(userPrompt, {
     systemPrompt,
@@ -103,6 +111,8 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     topP: 0.9,
     topK: 40
   });
+
+  if (progressCallback) progressCallback(50, 'Processing response...');
 
   // Parse the JSON response
   try {
@@ -126,6 +136,8 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     if (jsonMatch) {
       jsonStr = jsonMatch[0];
     }
+
+    if (progressCallback) progressCallback(80, 'Parsing results...');
 
     const parsed = JSON.parse(jsonStr);
     return parsed;

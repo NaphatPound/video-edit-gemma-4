@@ -74,20 +74,18 @@ Browser → Vite (localhost:3007) → /api/chat → Proxy (localhost:3003) → O
   - `processVideo(videoFile, segments, callback)` - Cut/assemble video segments
   - `addSubtitles(videoBlob, segments, callback)` - Burn subtitles with ASS format
 
-- `src/App.jsx` - Full React UI with:
-  - Status bar (Gemma API + FFmpeg status)
-  - Video upload with drag & drop
-  - Video preview with controls
-  - "Analyze with Gemma 4" button
-  - Visual timeline showing segments
-  - Segment details list
-  - "Export Edited Video" with FFmpeg processing
-  - Download button for final video
-
-- `src/styles.css` - Complete styling with:
-  - Dark glassmorphism theme
-  - Timeline visualization
-  - Segment type coloring (keep=cuts, cut=red, b-roll=orange)
+### 2026-04-06 - Audio Transcription Feature
+**Implemented:**
+- `src/services/audioService.js` - Browser-based audio transcription
+  - `extractAudioFromVideo(videoFile, callback)` - Extract audio using Web Audio API
+  - `transcribeVideoAudio(videoFile, callback)` - SpeechRecognition API transcription
+  - `wordsToSubtitles(words, maxDuration)` - Convert words to subtitle format
+- Updated `analyzeVideoContent()` to accept progress callback and use transcription
+- Updated `App.jsx` to:
+  - Extract frames (0-30%)
+  - Transcribe audio with SpeechRecognition (30-50%)
+  - Analyze with Gemma 4 (50-95%)
+  - Merge AI segments with transcribed subtitles
 
 ### References
 - [Ollama Library: gemma4:31b-cloud](https://ollama.com/library/gemma4:31b-cloud)
